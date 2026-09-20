@@ -9,7 +9,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wolaryofficial/BMNG_AdvancedRPC/releases">Downloads</a>
+  <a href="https://www.beamng.com/resources/advancedrpc.39485/">BeamNG Repository</a>
+  &middot;
+  <a href="https://github.com/wolaryofficial/BMNG_AdvancedRPC/releases">GitHub Releases</a>
   &middot;
   <a href="#installation">Installation</a>
   &middot;
@@ -49,13 +51,15 @@ Discord controls the final appearance and visibility of activity fields.
 
 ## Installation
 
-1. Download `advanced_rpc_1.0.0.zip` from [GitHub Releases](https://github.com/wolaryofficial/BMNG_AdvancedRPC/releases).
-2. Place the ZIP in the `mods` directory inside your active BeamNG.drive user folder. **Do not extract it.** See the [official installation guide](https://documentation.beamng.com/tutorials/mods/installing-mods/) if you need help finding the folder.
-3. Enable AdvancedRPC in the game's Mod Manager and keep the Discord desktop app running.
+1. Open [AdvancedRPC on the official BeamNG Repository](https://www.beamng.com/resources/advancedrpc.39485/) and choose **Subscribe**, or search for **AdvancedRPC** in the in-game Repository and subscribe there.
+2. Confirm that AdvancedRPC is enabled in the game's Mod Manager.
+3. Start the Discord desktop app and keep it running while you play.
 4. Enable Rich Presence and Discord Rich Presence in BeamNG's settings, and allow activity sharing in Discord.
 5. Open **Esc → Mods → AdvancedRPC**. Leave **Connection mode** set to **BeamNG Native** to start without a bridge or an Application ID.
 
-Use the packaged mod ZIP, rather than GitHub's automatically generated source-code ZIP. When updating from CustomRPC, remove the old mod ZIP before installing AdvancedRPC; existing settings and profiles are imported automatically.
+For manual installation, download the mod ZIP from the [BeamNG mod page](https://www.beamng.com/resources/advancedrpc.39485/) or [GitHub Releases](https://github.com/wolaryofficial/BMNG_AdvancedRPC/releases), then place it in the `mods` directory inside your active BeamNG.drive user folder. **Do not extract it.** See the [official installation guide](https://documentation.beamng.com/tutorials/mods/installing-mods/) if you need help finding the folder. Use the packaged mod ZIP, rather than GitHub's automatically generated source-code ZIP.
+
+When updating from CustomRPC, remove the old mod ZIP before installing AdvancedRPC; existing settings and profiles are imported automatically.
 
 ## Using your own Discord application
 
@@ -79,7 +83,34 @@ In the **Images** tab, enter an asset key or a direct, publicly accessible HTTPS
 
 BeamNG Native uses BeamNG's asset keys, such as `lvl_italy`, or your image URLs. Custom Application uses assets uploaded to your own application or image URLs; BeamNG's asset keys are not shared with your application.
 
-Text fields and image captions support `{variable}` and `{variable|fallback}`.
+Text fields and image captions support `{variable}` and `{variable|fallback}`. For example:
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Details</td>
+      <td><code>Driving {vehicle&#124;a vehicle}</code></td>
+    </tr>
+    <tr>
+      <td>State</td>
+      <td><code>{map&#124;Main menu} · {speed&#124;Parked}</code></td>
+    </tr>
+    <tr>
+      <td>Large image caption</td>
+      <td><code>Exploring {map&#124;BeamNG.drive}</code></td>
+    </tr>
+    <tr>
+      <td>Career details</td>
+      <td><code>Career · {career_activity&#124;Exploring}</code></td>
+    </tr>
+  </tbody>
+</table>
 
 The **Text** tab lists the available variables. Choose a profile in **General**, or assign it an automatic rule; editing or previewing a profile does not activate it.
 
@@ -96,4 +127,3 @@ The **Text** tab lists the available variables. Choose a profile in **General**,
 The source code is available in this repository. Improvements, bug fixes, and new features are welcome — including ideas the original author has not thought of yet. Share a suggestion, report a bug, or submit a pull request.
 
 To build the mod ZIP and Windows bridge from source, run `./build.ps1` in PowerShell on Windows. Add `-PrepareGitHub` to prepare the upload folder. Build outputs are written to `dist`.
-

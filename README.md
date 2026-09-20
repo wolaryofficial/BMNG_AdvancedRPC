@@ -79,14 +79,7 @@ In the **Images** tab, enter an asset key or a direct, publicly accessible HTTPS
 
 BeamNG Native uses BeamNG's asset keys, such as `lvl_italy`, or your image URLs. Custom Application uses assets uploaded to your own application or image URLs; BeamNG's asset keys are not shared with your application.
 
-Text fields and image captions support `{variable}` and `{variable|fallback}`. For example:
-
-| Field | Example |
-| --- | --- |
-| Details | `Driving {vehicle|a vehicle}` |
-| State | `{map|Main menu} · {speed|Parked}` |
-| Large image caption | `Exploring {map|BeamNG.drive}` |
-| Career details | `Career · {career_activity|Exploring}` |
+Text fields and image captions support `{variable}` and `{variable|fallback}`.
 
 The **Text** tab lists the available variables. Choose a profile in **General**, or assign it an automatic rule; editing or previewing a profile does not activate it.
 
@@ -103,8 +96,4 @@ The **Text** tab lists the available variables. Choose a profile in **General**,
 The source code is available in this repository. Improvements, bug fixes, and new features are welcome — including ideas the original author has not thought of yet. Share a suggestion, report a bug, or submit a pull request.
 
 To build the mod ZIP and Windows bridge from source, run `./build.ps1` in PowerShell on Windows. Add `-PrepareGitHub` to prepare the upload folder. Build outputs are written to `dist`.
-
-<p align="center">
-  <sub>Version 1.0.0 · made by wolary (w0kx)</sub>
-</p>
 

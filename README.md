@@ -18,6 +18,6 @@
 
 ###
 
-<p data-importer="text" align="center">If you want to use the mod with your own Discord Application ID, you will need the bridge application, which can be downloaded from the [Releases page](<https://github.com/wolaryofficial/BMNG_AdvancedRPC/releases>) .<br>The bridge is not included in the official BeamNG.drive repository version, as distributing it there may violate repository rules.<br><br>Simply download and run the bridge application, then configure the required settings directly in-game.</p>
+<p data-importer="text" align="center">If you want to use the mod with your own Discord Application ID, you will need the bridge application, which can be downloaded from the [Releases page](https://github.com/wolaryofficial/BMNG_AdvancedRPC/releases) .<br>The bridge is not included in the official BeamNG.drive repository version, as distributing it there may violate repository rules.<br><br>Simply download and run the bridge application, then configure the required settings directly in-game.</p>
 
 ###

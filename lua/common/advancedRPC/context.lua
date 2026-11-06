@@ -28,7 +28,7 @@ function M.new()
   end
 
   function self:attachBeamMP()
-    local module = extensions.UI
+    local module = rawget(extensions, "UI")
     if self.mpModule == module and module and module.setPlayerCount == self.mpWrapper then return end
     self:detachBeamMP()
     if not module or type(module.setPlayerCount) ~= "function" then return end
@@ -59,7 +59,16 @@ function M.new()
       ctx.map = self.maps[level]
       if assets[level] then ctx.map_asset = "lvl_" .. level end
     end
-    local vehicle = getPlayerVehicle(0)
+    local trackedPlayer = config.trackedPlayer or 0
+    local multiseat = rawget(extensions, "core_multiseat")
+    local joined = call(multiseat, "getJoinedPlayers") or {}
+    ctx.localPlayerIndices = {}
+    for _, index in ipairs(joined) do
+      if type(index) == "number" and index >= 0 and index <= 63 and index % 1 == 0 then ctx.localPlayerIndices[#ctx.localPlayerIndices + 1] = index end
+    end
+    if #ctx.localPlayerIndices == 0 then ctx.localPlayerIndices = {0} end
+    ctx.local_player, ctx.local_players, ctx.trackedPlayer = tostring(trackedPlayer + 1), tostring(#ctx.localPlayerIndices), trackedPlayer
+    local vehicle = level ~= "" and getPlayerVehicle(trackedPlayer) or nil
     local vehicleId = vehicle and vehicle:getID() or nil
     if vehicleId ~= self.vehicleId then self.vehicleId = vehicleId self.details = nil end
     if vehicle then
@@ -73,7 +82,7 @@ function M.new()
           self.vehicles[key] = (brand ~= "" and brand .. " " or "") .. name
         end
         ctx.vehicle = self.vehicles[key]
-        if not self.details then self.details = call(core_vehicles, "getCurrentVehicleDetails") or {} end
+        if not self.details then self.details = call(core_vehicles, "getVehicleDetails", vehicleId) or (trackedPlayer == 0 and call(core_vehicles, "getCurrentVehicleDetails")) or {} end
         local details = self.details
         ctx.vehicle_config = translated(details.configs and (details.configs.Configuration or details.configs.Name))
           or (details.current and details.current.config_key)
@@ -96,11 +105,17 @@ function M.new()
     flags.menu = level == ""
     flags.loading = call(core_gamestate, "getLoadingStatus", "levels") == true
     flags.career = not flags.menu and call(career_career, "isActive") == true
+    flags.splitscreen = not flags.menu and call(multiseat, "isMultiseatActive") == true
+    if flags.splitscreen then
+      local manager = rawget(extensions, "gameplay_multiseat_gamemodeManager")
+      local id = call(manager, "getGamemodeId")
+      ctx.split_mode = type(id) == "string" and id:gsub("_", " "):gsub("^%l", string.upper) or "Free roam"
+    end
     flags.editor = call(editor, "isEditorActive") == true
     flags.photo = call(ui_pause_photomode, "isPhotomodeSessionActive") == true
     local replay = call(core_replay, "getState")
     flags.replay = type(replay) == "string" and replay ~= "inactive" and replay ~= "idle"
-    flags.walking = call(gameplay_walk, "isWalking") == true or ctx.vehicle_model == "unicycle"
+    flags.walking = call(gameplay_walk, "isWalking", trackedPlayer) == true or ctx.vehicle_model == "unicycle"
     local missionId = call(gameplay_missions_missionManager, "getForegroundMissionId")
     if missionId then
       flags.mission = true
@@ -127,11 +142,12 @@ function M.new()
       ctx.career_profile = call(career_saveSystem, "getCurrentDisplayName") or call(career_saveSystem, "getCurrentProfile")
       if type(ctx.career_profile) ~= "string" then ctx.career_profile = nil end
     end
-    flags.beammp = call(extensions.MPCoreNetwork, "isMPSession") == true
+    local network = rawget(extensions, "MPCoreNetwork")
+    flags.beammp = call(network, "isMPSession") == true
     if flags.beammp then
-      local server = call(extensions.MPCoreNetwork, "getCurrentServer")
+      local server = call(network, "getCurrentServer")
       ctx.server = server and server.name and server.name:gsub("%^%w", "") or nil
-      local players = call(extensions.MPVehicleGE, "getPlayers")
+      local players = call(rawget(extensions, "MPVehicleGE"), "getPlayers")
       if type(players) == "table" then
         local count = 0
         for _ in pairs(players) do count = count + 1 end
@@ -141,15 +157,15 @@ function M.new()
       if ctx.playerCount then ctx.players = tostring(ctx.playerCount) end
       if ctx.playerLimit then ctx.max_players = tostring(ctx.playerLimit) end
     else self.playerCount, self.playerLimit = nil, nil end
-    flags.freeroam = not flags.menu and not flags.career and not flags.scenario and not flags.mission
+    flags.freeroam = not flags.menu and not flags.career and not flags.scenario and not flags.mission and not flags.splitscreen
     ctx.isPaused = call(simTimeAuthority, "getPause") == true
     ctx.paused = ctx.isPaused and "Paused" or "Playing"
     local mode = "Free roam"
-    for _, item in ipairs({{"loading", "Loading"}, {"menu", "Main menu"}, {"editor", "World editor"}, {"photo", "Photo mode"}, {"replay", "Replay"}, {"career", "Career"}, {"walking", "Walking"}, {"mission", "Mission"}, {"scenario", "Scenario"}, {"beammp", "BeamMP"}}) do
+    for _, item in ipairs({{"loading", "Loading"}, {"menu", "Main menu"}, {"editor", "World editor"}, {"photo", "Photo mode"}, {"replay", "Replay"}, {"career", "Career"}, {"splitscreen", "Split Screen"}, {"walking", "Walking"}, {"mission", "Mission"}, {"scenario", "Scenario"}, {"beammp", "BeamMP"}}) do
       if flags[item[1]] then mode = item[2] break end
     end
     ctx.mode = mode
-    ctx.activity = mode .. (mode == "Career" and " | " .. ctx.career_activity or "") .. (ctx.vehicle and not flags.menu and not flags.loading and " | " .. ctx.vehicle or "")
+    ctx.activity = mode .. (mode == "Career" and " | " .. ctx.career_activity or "") .. (mode == "Split Screen" and " | " .. (flags.walking and "Walking" or ctx.split_mode) or "") .. (ctx.vehicle and not flags.menu and not flags.loading and " | " .. ctx.vehicle or "")
     ctx.location = flags.beammp and (ctx.server or "Multiplayer") or ctx.map or "Main menu"
     if ctx.isPaused and not flags.menu then ctx.activity = "Paused | " .. ctx.activity end
     local tod = level ~= "" and call(core_environment, "getTimeOfDay")

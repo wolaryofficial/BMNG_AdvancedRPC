@@ -29,6 +29,11 @@ async function click(action) {
 async function input(field, value) {
   await ui(`const e=document.querySelector('[data-field=${JSON.stringify(field)}] input');if(!e)throw new Error('Missing input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true`)
 }
+async function select(field, label) {
+  await ui(`document.querySelector('[data-field=${JSON.stringify(field)}] .bng-dropdown').click();return true`)
+  await until(() => ui(`return [...document.querySelectorAll('.dropdown-option')].some(e=>e.textContent.trim()===${JSON.stringify(label)})`), 'dropdown ' + field)
+  await ui(`const option=[...document.querySelectorAll('.dropdown-option')].find(e=>e.textContent.trim()===${JSON.stringify(label)});option.click();return true`)
+}
 
 const initial = await settings()
 const initialCount = initial.settings.profiles.length
@@ -36,7 +41,7 @@ const created = []
 try {
   await open()
   assert.equal(await ui('return document.querySelector(".arpc-credit").textContent'), 'made by wolary (w0kx)')
-  assert.equal(await ui('return document.querySelector(".arpc-version").textContent'), 'v1.0.0')
+  assert.equal(await ui('return document.querySelector(".arpc-version").textContent'), 'v1.1.0')
   await until(() => ui('const icon=document.querySelector(".arpc-logo");return !!icon && icon.complete && icon.naturalWidth>0'), 'mod icon')
   assert((await settings()).contexts.includes('career_delivery'))
   assert((await settings()).variables.career_activity)
@@ -46,6 +51,34 @@ try {
   await until(async () => (await settings()).settings.updateInterval === 8, 'interval autosave')
   assert.equal((await settings()).saved, true)
   console.log('PASS native menu, icon, credit, version, career controls and fast interval autosave')
+  await select('language', 'Русский')
+  await until(() => ui('return document.querySelector("[data-tab=General]").textContent.trim()==="Основное"'), 'Russian interface')
+  assert((await ui('return document.querySelector("[data-field=trackedPlayer]").textContent')).includes('Игрок для отображения'))
+  await input('trackedPlayer', '3')
+  await until(async () => (await settings()).settings.trackedPlayer === 2, 'local player autosave')
+  await input('trackedPlayer', '1')
+  await select('language', 'English')
+  await until(() => ui('return document.querySelector("[data-tab=General]").textContent.trim()==="General"'), 'English interface')
+  assert((await settings()).contexts.includes('splitscreen'))
+  assert((await settings()).variables.local_player)
+  console.log('PASS Russian and English interface switching and local player selection')
+  await tab('Profiles')
+  for (const [name, context] of [['Career', 'career'], ['Deliveries', 'career_delivery'], ['BeamMP', 'beammp'], ['Split Screen', 'splitscreen']]) {
+    await select('preset', name)
+    await click('create-preset')
+    await until(async () => (await settings()).settings.profiles.length === initialCount + 1, 'preset ' + name)
+    const data = await settings()
+    const profile = data.settings.profiles.at(-1)
+    created.push(profile.id)
+    assert.equal(profile.name, name)
+    assert.equal(data.settings.rules[0].context, context)
+    assert.equal(data.settings.rules[0].profileId, profile.id)
+    await click('delete')
+    await click('delete')
+    await until(async () => (await settings()).settings.profiles.length === initialCount, 'remove preset ' + name)
+    created.pop()
+  }
+  console.log('PASS all four presets through the settings UI, matching rules and deletion cleanup')
   await tab('Profiles')
   await click('duplicate')
   await until(async () => (await settings()).settings.profiles.length === initialCount + 1, 'profile duplication')
@@ -82,6 +115,13 @@ try {
     await input('largeText', 'Карта: {map|Main menu}')
     await input('smallText', 'made by wolary (w0kx)')
     await until(async () => (await settings()).settings.profiles.at(-1).smallText === 'made by wolary (w0kx)', 'image captions autosave')
+    await input('largeImage', 'https://example.com/' + 'a'.repeat(130))
+    await click('check-images')
+    await until(() => ui('return document.querySelector("[data-image-check=large]")?.dataset.result==="too_long"'), 'native image length validation')
+    await input('largeImage', 'https://cdn.discordapp.com/embed/avatars/0.png')
+    await click('retry-images')
+    await until(() => ui('return [...document.querySelectorAll("[data-image-check]")].every(e=>["loaded","unavailable","blocked","timeout","http_error"].includes(e.dataset.result))'), 'image retry result')
+    console.log('PASS native image length error and retry with network result: ' + JSON.stringify(await ui('return [...document.querySelectorAll("[data-image-check]")].map(e=>({slot:e.dataset.imageCheck,result:e.dataset.result}))')))
   }
   await tab('Preview')
   await until(() => ui('return !!document.querySelector(".arpc-presence")'), 'preview')
@@ -107,12 +147,13 @@ try {
   await wait(600)
   let current = await settings()
   const rules = JSON.stringify(initial.settings.rules).startsWith('[') ? initial.settings.rules : []
-  const general = Object.fromEntries(['enabled', 'transport', 'applicationId', 'updateInterval', 'units', 'automatic', 'selectedProfileId'].map(key => [key, initial.settings[key]]))
+  const general = Object.fromEntries(['enabled', 'transport', 'applicationId', 'updateInterval', 'units', 'automatic', 'selectedProfileId', 'language', 'trackedPlayer'].map(key => [key, initial.settings[key]]))
   const args = JSON.stringify({ revision: current.revision, patch: { general, rules } })
   const patched = await ge(`return extensions.advancedRPC.setSettingsFromUI(jsonDecode([========[${args}]========]))`)
   assert(patched.settings && !patched.conflict, 'Restore initial settings')
   for (const id of created) {
     current = await settings()
+    if (!current.settings.profiles.some(profile => profile.id === id)) continue
     const request = JSON.stringify({ revision: current.revision, action: 'delete', id })
     const result = await ge(`return extensions.advancedRPC.profileAction(jsonDecode([========[${request}]========]))`)
     assert(result.settings, 'Remove validation profile')

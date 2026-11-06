@@ -1,4 +1,4 @@
-local M = {version = "1.0.0", schemaVersion = 1}
+local M = {version = "1.1.0", schemaVersion = 1}
 
 M.variables = {
   activity = "Context-aware activity description", location = "Map or menu description",
@@ -11,9 +11,16 @@ M.variables = {
   server = "BeamMP server name", players = "Connected players", max_players = "Server player limit",
   paused = "Simulation pause state", career_activity = "Current career activity",
   career_money = "Career balance", career_beamxp = "Career BeamXP", career_level = "Career BeamXP level",
-  career_profile = "Career profile name"
+  career_profile = "Career profile name", local_player = "Tracked local player number",
+  local_players = "Local player count", split_mode = "Split Screen game mode"
 }
-M.contexts = {"any", "menu", "loading", "freeroam", "career", "career_delivery", "career_mission", "career_shopping", "career_tutorial", "career_walking", "career_garage", "mission", "scenario", "editor", "photo", "replay", "walking", "beammp"}
+M.contexts = {"any", "menu", "loading", "freeroam", "career", "career_delivery", "career_mission", "career_shopping", "career_tutorial", "career_walking", "career_garage", "mission", "scenario", "editor", "photo", "replay", "walking", "beammp", "splitscreen"}
+M.presets = {
+  {id = "career", name = "Career", context = "career", details = "Career | {career_activity|Exploring}", state = "{map|Main menu} | Level {career_level|1}"},
+  {id = "delivery", name = "Deliveries", context = "career_delivery", details = "Delivering cargo | {vehicle|On foot}", state = "{map|Main menu} | {speed|Parked}"},
+  {id = "beammp", name = "BeamMP", context = "beammp", details = "{server|BeamMP}", state = "{players|?}/{max_players|?} players | {vehicle|On foot}"},
+  {id = "splitscreen", name = "Split Screen", context = "splitscreen", details = "Split Screen | {split_mode|Free roam}", state = "Player {local_player|1} | {vehicle|On foot} | {local_players|1} players"}
+}
 local profileFields = {
   name = true, details = true, state = true, activityName = true, activityType = true, statusDisplay = true,
   largeImage = true, largeText = true, smallImage = true, smallText = true,
@@ -21,7 +28,7 @@ local profileFields = {
   timerMode = true, countdownSeconds = true, rotationEnabled = true, rotationSeconds = true,
   detailsVariants = true, stateVariants = true, mapImages = true, vehicleImages = true, buttons = true
 }
-M.generalFields = {enabled = true, transport = true, applicationId = true, updateInterval = true, units = true, automatic = true, selectedProfileId = true}
+M.generalFields = {enabled = true, transport = true, applicationId = true, updateInterval = true, units = true, automatic = true, selectedProfileId = true, language = true, trackedPlayer = true}
 
 function M.copy(value)
   if type(value) ~= "table" then return value end
@@ -49,8 +56,57 @@ function M.defaults()
   c.details, c.state = "{vehicle|Exploring BeamNG.drive}", "{speed} | {rpm} RPM | Gear {gear}"
   return {
     schemaVersion = 1, enabled = true, transport = "native", applicationId = "", updateInterval = 5,
-    units = "game", automatic = true, selectedProfileId = "automatic", profiles = {a, b, c}, rules = {}
+    units = "game", automatic = true, selectedProfileId = "automatic", profiles = {a, b, c}, rules = {}, language = "auto", trackedPlayer = 0
   }
+end
+
+function M.upgrade(config)
+  if type(config) ~= "table" or config.schemaVersion ~= 1 then return config, false end
+  local result, changed = M.copy(config), false
+  for key, value in pairs({language = "auto", trackedPlayer = 0}) do
+    if result[key] == nil then result[key], changed = value, true end
+  end
+  return result, changed
+end
+
+local function imageTemplates(profile, context)
+  local large, small = profile.largeImage, profile.smallImage
+  for _, row in ipairs(profile.mapImages) do if row.match:lower() == tostring(context.map_id or ""):lower() then large = row.image break end end
+  for _, row in ipairs(profile.vehicleImages) do if row.match:lower() == tostring(context.vehicle_model or ""):lower() then small = row.image break end end
+  return large, small
+end
+
+local function rotating(profile, key, timeline, now)
+  local choices = profile[key .. "Variants"]
+  if profile.rotationEnabled and #choices > 0 then
+    local index = math.floor(math.max(0, now - timeline.profileStart) / profile.rotationSeconds)
+    return choices[index % #choices + 1]
+  end
+  return profile[key]
+end
+
+function M.telemetryFields(profile, context, transport, timeline, now)
+  local result = {}
+  context, timeline, now = context or {}, timeline or {profileStart = 0}, now or 0
+  local function visit(value)
+    if type(value) == "string" then
+      for key in value:gmatch("{([%w_]+)[^}]*}") do
+        if key == "rpm" or key == "gear" or key == "fuel" or key == "engine" then result[key] = true end
+      end
+    elseif type(value) == "table" then for _, child in pairs(value) do visit(child) end end
+  end
+  visit(rotating(profile, "details", timeline, now))
+  visit(rotating(profile, "state", timeline, now))
+  local large, small = imageTemplates(profile, context)
+  visit(large)
+  visit(small)
+  if large ~= "" then visit(profile.largeText) end
+  if small ~= "" then visit(profile.smallText) end
+  if transport == "custom" then
+    for _, key in ipairs({"activityName", "detailsUrl", "stateUrl", "largeUrl", "smallUrl"}) do visit(profile[key]) end
+    for _, button in ipairs(profile.buttons) do if button.enabled then visit(button.label) visit(button.url) end end
+  end
+  return result
 end
 
 local function enum(value, choices)
@@ -92,6 +148,8 @@ function M.validate(config)
   for _, key in ipairs({"enabled", "automatic"}) do if type(config[key]) ~= "boolean" then return false, "Invalid " .. key .. "." end end
   if not enum(config.transport, {"native", "custom"}) then return false, "Invalid connection mode." end
   if not enum(config.units, {"game", "metric", "imperial"}) then return false, "Invalid units." end
+  if not enum(config.language, {"auto", "en", "ru"}) then return false, "Invalid interface language." end
+  if not finite(config.trackedPlayer) or config.trackedPlayer % 1 ~= 0 or config.trackedPlayer < 0 or config.trackedPlayer > 63 then return false, "Choose a local player from 1 to 64." end
   if type(config.applicationId) ~= "string" or (config.applicationId ~= "" and (not config.applicationId:match("^%d+$") or #config.applicationId < 17 or #config.applicationId > 20)) then
     return false, "Application ID must contain 17 to 20 digits."
   end
@@ -224,26 +282,20 @@ function M.build(config, context, timeline, now, selected)
     if not M.validUrl(rendered, false) then warnings[#warnings + 1] = field .. " is not a valid HTTPS URL." return nil end
     return rendered
   end
-  local index = math.floor(math.max(0, now - timeline.profileStart) / p.rotationSeconds)
-  local function rotating(key)
-    local choices = p[key .. "Variants"]
-    if p.rotationEnabled and #choices > 0 then return choices[index % #choices + 1] end
-    return p[key]
-  end
-  activity.details = text(rotating("details"), "Details", maxText)
-  activity.state = text(rotating("state"), "State", maxText)
+  activity.details = text(rotating(p, "details", timeline, now), "Details", maxText)
+  activity.state = text(rotating(p, "state", timeline, now), "State", maxText)
   if not native then activity.name = text(p.activityName, "Activity name", 128) end
-  local largeImage, smallImage = p.largeImage, p.smallImage
-  for _, row in ipairs(p.mapImages) do if row.match:lower() == tostring(ctx.map_id or ""):lower() then largeImage = row.image break end end
-  for _, row in ipairs(p.vehicleImages) do if row.match:lower() == tostring(ctx.vehicle_model or ""):lower() then smallImage = row.image break end end
-  local function image(value, field)
+  local largeImage, smallImage = imageTemplates(p, ctx)
+  local imageSources = {}
+  local function image(value, field, slot)
+    imageSources[slot] = M.render(value, ctx)
     if value == "" then return nil end
     local rendered = M.render(value, ctx, warnings)
     if not validImage(rendered) or #rendered > (native and 127 or 512) then warnings[#warnings + 1] = field .. " is invalid or too long." return nil end
     return rendered
   end
   local assets = {
-    large_image = image(largeImage, "Large image"), small_image = image(smallImage, "Small image"),
+    large_image = image(largeImage, "Large image", "large"), small_image = image(smallImage, "Small image", "small"),
     large_text = text(p.largeText, "Large image tooltip", maxText), small_text = text(p.smallText, "Small image tooltip", maxText)
   }
   if not native then
@@ -272,7 +324,7 @@ function M.build(config, context, timeline, now, selected)
     asset_largeimg = assets.large_image or "", asset_largetxt = assets.large_text or "",
     asset_smallimg = assets.small_image or "", asset_smalltxt = assets.small_text or ""
   }
-  return {profileId = p.id, profileName = p.name, activity = activity, nativeActivity = nativeActivity, warnings = warnings, variables = ctx}
+  return {profileId = p.id, profileName = p.name, activity = activity, nativeActivity = nativeActivity, warnings = warnings, variables = ctx, imageSources = imageSources}
 end
 
 function M.signature(value)

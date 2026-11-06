@@ -1,13 +1,14 @@
 <template>
-  <BngRow :label="label" :vertical="type !== 'switch'" no-focus-frame :disabled="disabled" :tooltip="hint || undefined" :data-field="field" :class="['arpc-field', { 'arpc-toggle': type === 'switch' }]">
-    <BngSwitch v-if="type === 'switch'" :model-value="value" :aria-label="label" @update:model-value="emit('change', $event)" />
-    <BngDropdown v-else-if="type === 'select'" :model-value="value" :items="options" :aria-label="label" @update:model-value="emit('change', $event)" />
-    <textarea v-else-if="type === 'textarea'" v-bng-text-input :value="value" :aria-label="label" :rows="rows" :maxlength="maxlength" :readonly="readonly" :disabled="disabled" spellcheck="false" @input="emit('change', $event.target.value)" />
-    <BngInput v-else :model-value="value" :type="type === 'number' ? 'number' : 'text'" :min="min" :max="max" :maxlength="maxlength" :readonly="readonly" :aria-label="label" :placeholder="placeholder" @update:model-value="emit('change', type === 'number' && $event !== '' ? Number($event) : $event)" />
+  <BngRow :label="t(label)" :vertical="type !== 'switch'" no-focus-frame :disabled="disabled" :tooltip="hint ? t(hint) : undefined" :data-field="field" :class="['arpc-field', { 'arpc-toggle': type === 'switch' }]">
+    <BngSwitch v-if="type === 'switch'" :model-value="value" :aria-label="t(label)" @update:model-value="emit('change', $event)" />
+    <BngDropdown v-else-if="type === 'select'" :model-value="value" :items="options" :aria-label="t(label)" @update:model-value="emit('change', $event)" />
+    <textarea v-else-if="type === 'textarea'" v-bng-text-input :value="value" :aria-label="t(label)" :rows="rows" :maxlength="maxlength" :readonly="readonly" :disabled="disabled" spellcheck="false" @input="emit('change', $event.target.value)" />
+    <BngInput v-else :model-value="value" :type="type === 'number' ? 'number' : 'text'" :min="min" :max="max" :maxlength="maxlength" :readonly="readonly" :aria-label="t(label)" :placeholder="t(placeholder)" @update:model-value="emit('change', type === 'number' && $event !== '' ? Number($event) : $event)" />
   </BngRow>
 </template>
 
 <script setup>
+import { inject } from "vue"
 import { BngRow, BngSwitch, BngDropdown, BngInput } from "@/common/components/base"
 import { vBngTextInput } from "@/common/directives"
 defineProps({
@@ -16,6 +17,7 @@ defineProps({
   min: Number, max: Number, placeholder: String, rows: { type: Number, default: 4 }, maxlength: { type: Number, default: 512 },
 })
 const emit = defineEmits(["change"])
+const t = inject('advancedRPCTranslate', value => value)
 </script>
 
 <style scoped>

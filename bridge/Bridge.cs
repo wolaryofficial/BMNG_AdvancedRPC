@@ -19,8 +19,8 @@ using Microsoft.Win32;
 [assembly: AssemblyDescription("BeamNG.drive Discord Rich Presence bridge")]
 [assembly: AssemblyCompany("wolary (w0kx)")]
 [assembly: AssemblyProduct("AdvancedRPC")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace AdvancedRPC
 {
@@ -269,7 +269,7 @@ namespace AdvancedRPC
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Exit", null, (sender, args) => ExitThread());
             artwork = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? (Icon)SystemIcons.Application.Clone();
-            icon = new NotifyIcon { Icon = artwork, Text = "AdvancedRPC 1.0.0", ContextMenuStrip = menu, Visible = true };
+            icon = new NotifyIcon { Icon = artwork, Text = "AdvancedRPC 1.1.0", ContextMenuStrip = menu, Visible = true };
             icon.DoubleClick += (sender, args) => ShowStatus();
             timer = new System.Windows.Forms.Timer { Interval = 1000 };
             timer.Tick += (sender, args) => { string text = "AdvancedRPC: " + status; icon.Text = text.Substring(0, Math.Min(63, text.Length)); };
@@ -278,7 +278,7 @@ namespace AdvancedRPC
         }
         private void ShowStatus()
         {
-            icon.ShowBalloonTip(5000, "AdvancedRPC 1.0.0", status + ".\nSettings: BeamNG → Esc → Mods → AdvancedRPC\nmade by wolary (w0kx)", ToolTipIcon.Info);
+            icon.ShowBalloonTip(5000, "AdvancedRPC 1.1.0", status + ".\nSettings: BeamNG → Esc → Mods → AdvancedRPC\nmade by wolary (w0kx)", ToolTipIcon.Info);
         }
         private async Task Accept()
         {

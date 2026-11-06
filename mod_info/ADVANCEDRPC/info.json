@@ -1,10 +1,10 @@
 {
-  "filename": "advanced_rpc_1.0.0.zip",
+  "filename": "advanced_rpc_1.1.0.zip",
   "title": "AdvancedRPC",
   "username": "w0kx",
   "tagid": "ADVANCEDRPC",
-  "version_string": "1.0.0",
+  "version_string": "1.1.0",
   "icon": "icon.png",
-  "tag_line": "Customizable Discord Rich Presence for BeamNG.drive, Career and BeamMP.",
-  "message": "Native settings in Esc > Mods > AdvancedRPC. Profiles, live variables, career activities, automatic rules, rotating text, images, timers and custom Discord applications. Optional Windows startup for AdvancedRPC Bridge. made by wolary (w0kx)"
+  "tag_line": "Customizable Discord Rich Presence for Career, BeamMP and Split Screen.",
+  "message": "Version 1.1.0: BeamNG 0.40 support, Split Screen player selection, English/Russian settings, ready presets, image URL checks and demand-driven telemetry. Settings: Esc > Mods > AdvancedRPC. Optional Windows startup for AdvancedRPC Bridge. made by wolary (w0kx)"
 }

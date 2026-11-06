@@ -13,6 +13,8 @@ local activeTransport, lastSignature, lastLevel, activeProfile, saveError, loadE
 local nativeSent, lastTelemetryAt, alive, profileCounter = false, -100, false, 0
 local urgent, contextSignature, sendError, retryAt = true, nil, "", 0
 local sendTimes = {}
+local nextTelemetry, telemetryRequests, previewTelemetryUntil = 0, 0, 0
+local telemetryFields, previewTelemetryFields, telemetryVehicles = {}, {}, {}
 local path = "/settings/advanced_rpc.json"
 local legacyPath = "/settings/custom_rpc.json"
 local status = {state = "starting", message = "Starting AdvancedRPC", version = model.version}
@@ -37,12 +39,14 @@ local function save()
 end
 
 local function snapshot()
-  return {settings = model.copy(config), revision = revision, saved = saveError == "", error = saveError ~= "" and saveError or loadError}
+  local language = settings and settings.getValue and settings.getValue("userLanguage")
+  return {settings = model.copy(config), revision = revision, saved = saveError == "", error = saveError ~= "" and saveError or loadError, gameLanguage = type(language) == "string" and language or "en"}
 end
 
 function M.getSettings()
   local result = snapshot()
   result.variables, result.contexts, result.version = model.copy(model.variables), model.copy(model.contexts), model.version
+  result.presets = model.copy(model.presets)
   return result
 end
 
@@ -51,6 +55,11 @@ local function announce()
 end
 
 local function commit(value)
+  if value.trackedPlayer ~= config.trackedPlayer then
+    generationEpoch = generationEpoch + 1
+    generation = generationBase .. ":" .. tostring(generationEpoch)
+    telemetry, lastTelemetryAt, nextTelemetry = nil, -100, 0
+  end
   config, revision, loadError = value, revision + 1, ""
   lastSignature, nextSample, urgent, sendError, retryAt = nil, 0, true, "", 0
   save()
@@ -91,11 +100,20 @@ function M.profileAction(request)
   local index
   for i, p in ipairs(nextConfig.profiles) do if p.id == request.id then index = i break end end
   local selected
-  if request.action == "create" or request.action == "duplicate" then
+  if request.action == "create" or request.action == "duplicate" or request.action == "preset" then
     if #nextConfig.profiles >= 50 then return {error = "The 50-profile limit has been reached."} end
     if request.action == "duplicate" and not index then return {error = "The profile no longer exists."} end
     local p = request.action == "duplicate" and model.copy(nextConfig.profiles[index]) or model.profile("new", "New profile")
     p.id = newId()
+    if request.action == "preset" then
+      local preset
+      for _, candidate in ipairs(model.presets) do if candidate.id == request.presetId then preset = candidate break end end
+      if not preset then return {error = "Choose an available preset."} end
+      p.name, p.details, p.state = preset.name, preset.details, preset.state
+      if request.withRule == true then
+        table.insert(nextConfig.rules, 1, {id = "rule-" .. p.id, enabled = true, profileId = p.id, context = preset.context, map = "", vehicle = "", paused = "any", minSpeed = "", maxSpeed = ""})
+      end
+    end
     if request.action == "duplicate" then p.name = model.truncate(p.name, 70) .. " copy" end
     nextConfig.profiles[#nextConfig.profiles + 1] = p
     selected = p.id
@@ -135,7 +153,7 @@ function M.importProfile(request)
   if conflict then return conflict end
   if type(request.json) ~= "string" or #request.json > 262144 then return {error = "Import a profile JSON smaller than 256 KB."} end
   local ok, data = pcall(jsonDecode, request.json)
-  if not ok or type(data) ~= "table" or data.schemaVersion ~= 1 or type(data.profile) ~= "table" then return {error = "This is not a AdvancedRPC 1.0 profile export."} end
+  if not ok or type(data) ~= "table" or data.schemaVersion ~= 1 or type(data.profile) ~= "table" then return {error = "This is not a supported AdvancedRPC profile export."} end
   local nextConfig = model.copy(config)
   local p = model.copy(data.profile)
   p.id = newId()
@@ -260,7 +278,10 @@ local function sample()
   end
   local p = model.selectProfile(config, context)
   if activeProfile ~= p.id then activeProfile, timeline.profileStart = p.id, os.time() end
-  local signature = model.signature({map = context.map_id, vehicle = context.vehicleId, profile = p.id, flags = context.flags, mission = context.mission, paused = context.isPaused, career = context.career_activity})
+  local fields = model.telemetryFields(p, context, config.transport, timeline, os.time())
+  if model.signature(fields) ~= model.signature(telemetryFields) then nextTelemetry = 0 end
+  telemetryFields = fields
+  local signature = model.signature({map = context.map_id, vehicle = context.vehicleId, player = config.trackedPlayer, players = context.local_players, splitMode = context.split_mode, profile = p.id, flags = context.flags, mission = context.mission, paused = context.isPaused, career = context.career_activity})
   if signature ~= contextSignature then urgent, contextSignature = true, signature end
   preview = model.build(config, context, timeline, os.time(), p)
 end
@@ -269,7 +290,12 @@ function M.getPreview(request)
   if not preview then sample() end
   if type(request) == "table" and request.profileId then
     for _, p in ipairs(config.profiles) do
-      if p.id == request.profileId then return model.build(config, context, timeline, os.time(), p) end
+      if p.id == request.profileId then
+        local fields = model.telemetryFields(p, context, config.transport, timeline, os.time())
+        if model.signature(fields) ~= model.signature(previewTelemetryFields) then nextTelemetry = 0 end
+        previewTelemetryFields, previewTelemetryUntil = fields, elapsed + 2.5
+        return model.build(config, context, timeline, os.time(), p)
+      end
     end
   end
   return model.copy(preview)
@@ -281,6 +307,8 @@ function M.getStatus()
   result.lastSentAt, result.saveError, result.loadError = lastSend > -1000 and os.time() - math.floor(elapsed - lastSend) or nil, saveError, loadError
   result.preview = model.copy(preview)
   result.acceptedActivity = ipc and model.copy(ipc.lastAckActivity) or nil
+  result.trackedPlayer, result.localPlayers, result.playerAvailable = config.trackedPlayer, model.copy(context.localPlayerIndices or {0}), context.vehicleId ~= nil
+  result.telemetryRequests = telemetryRequests
   return result
 end
 
@@ -291,21 +319,24 @@ function M.reconnect()
   return M.getStatus()
 end
 
-local nextTelemetry = 0
 local function update(dtReal)
   if not alive then return end
   elapsed = elapsed + math.max(0, dtReal or 0)
   updateTransport()
-  if elapsed >= nextSample then sample() nextSample = elapsed + 0.25 end
-  if config.enabled and context.vehicleId and context.vehicle_model ~= "unicycle" and elapsed >= nextTelemetry then
-    local vehicle = getPlayerVehicle(0)
+  if elapsed >= nextSample then sample() nextSample = elapsed + ((not config.enabled or context.flags.menu) and 1 or 0.25) end
+  local requested = model.copy(telemetryFields)
+  if elapsed <= previewTelemetryUntil then for key in pairs(previewTelemetryFields) do requested[key] = true end end
+  if config.enabled and next(requested) and context.vehicleId and context.vehicle_model ~= "unicycle" and elapsed >= nextTelemetry then
+    local vehicle = getPlayerVehicle(config.trackedPlayer)
     if vehicle and vehicle:getID() == context.vehicleId then
-      vehicle:queueLuaCommand("extensions.load('advancedRPCTelemetry'); extensions.advancedRPCTelemetry.sample(" .. serialize(generation) .. ")")
+      vehicle:queueLuaCommand("if not rawget(extensions,'advancedRPCTelemetry') then extensions.load('advancedRPCTelemetry') end extensions.advancedRPCTelemetry.sample(" .. serialize(generation) .. "," .. serialize(requested) .. ")")
+      telemetryVehicles[context.vehicleId] = true
+      telemetryRequests = telemetryRequests + 1
     end
-    nextTelemetry = elapsed + 0.25
+    nextTelemetry = elapsed + 1
   end
   while sendTimes[1] and elapsed - sendTimes[1] >= 20 do table.remove(sendTimes, 1) end
-  local delay = urgent and 1 or config.updateInterval
+  local delay = urgent and 1 or math.min(config.updateInterval, 30)
   if activeTransport and preview and elapsed >= retryAt and #sendTimes < 5 and (not sendTimes[#sendTimes] or elapsed - sendTimes[#sendTimes] >= 1) and elapsed - lastSend >= delay then
     local payload = activeTransport == "native" and preview.nativeActivity or preview.activity
     local signature = model.signature(payload)
@@ -348,10 +379,12 @@ function M.onExtensionLoaded()
   local readPath = not FS:fileExists(path) and FS:fileExists(legacyPath) and legacyPath or path
   local ok, saved = pcall(jsonReadFile, readPath)
   if ok and saved ~= nil then
+    local changed
+    saved, changed = model.upgrade(saved)
     local valid, err = model.validate(saved)
     if valid then
       config = saved
-      if readPath ~= path then save() end
+      if readPath ~= path or changed then save() end
     else config.enabled = false loadError = "Saved settings were not loaded: " .. tostring(err) end
   elseif FS:fileExists(readPath) then config.enabled = false loadError = "Saved settings could not be read. Your file has been preserved." end
   alive = true
@@ -365,8 +398,10 @@ function M.onExtensionUnloaded()
   releaseTransport()
   collector:detachBeamMP()
   restoreHooks()
-  local vehicle = getPlayerVehicle(0)
-  if vehicle then vehicle:queueLuaCommand("extensions.unload('advancedRPCTelemetry')") end
+  for id in pairs(telemetryVehicles) do
+    local vehicle = getObjectByID and getObjectByID(id)
+    if vehicle then vehicle:queueLuaCommand("extensions.unload('advancedRPCTelemetry')") end
+  end
 end
 
 function M.onSerialize()
@@ -376,11 +411,12 @@ end
 function M.onDeserialized(data)
   if type(data) ~= "table" then return end
   if type(data.timeline) == "table" and type(data.timeline.sessionStart) == "number" and type(data.timeline.profileStart) == "number" then timeline = data.timeline end
-  if model.validate(data.config) then config = data.config revision = tonumber(data.revision) or revision end
+  local restored = model.upgrade(data.config)
+  if model.validate(restored) then config = restored revision = tonumber(data.revision) or revision end
   activeProfile, lastLevel, nextSample = data.activeProfile, data.lastLevel, 0
 end
 
-function M.onSettingsChanged() nextSample = 0 end
+function M.onSettingsChanged() nextSample = 0 announce() end
 function M.onVehicleSwitched()
   generationEpoch = generationEpoch + 1
   generation = generationBase .. ":" .. tostring(generationEpoch)
@@ -403,6 +439,8 @@ M.onPartShoppingCancelled = M.onCareerActive
 M.onAnyMissionChanged = M.onCareerActive
 M.onScenarioChange = M.onCareerActive
 M.onWorldReadyState = M.onCareerActive
+M.onMultiseatSettingsApplied = M.onCareerActive
+M.onUiChangedState = M.onCareerActive
 function M.onBeamMPServerLeave() collector.playerCount, collector.playerLimit, nextSample = nil, nil, 0 end
 function M.onModDeactivated(name)
   if type(name) == "table" then name = name.modname or name.name or name.filename end

@@ -1,4 +1,4 @@
-export const VERSION = "1.0.0"
+export const VERSION = "1.1.0"
 export const clone = value => JSON.parse(JSON.stringify(value))
 
 export function normalize(settings) {
@@ -40,6 +40,8 @@ export function createSettingsModel(state, call, delay = 400) {
     state.revision = result.revision
     state.config = applyPatch(baseline, mergePatch(inFlight, pending))
     state.saved = result.saved !== false
+    if (result.gameLanguage) state.gameLanguage = result.gameLanguage
+    if (result.presets) state.presets = result.presets
   }
 
   async function load() {
@@ -50,6 +52,7 @@ export function createSettingsModel(state, call, delay = 400) {
       accept(result)
       state.variables = result.variables || {}
       state.contexts = result.contexts || ["any"]
+      state.presets = result.presets || []
       state.ready = true
       state.error = result.error || ""
       state.status = await call("getStatus")

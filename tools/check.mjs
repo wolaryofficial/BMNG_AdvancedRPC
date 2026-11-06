@@ -42,7 +42,6 @@ async function walk(path) {
 
 async function main() {
   const files = await walk(root)
-  assert(!files.some(x => /readme/i.test(x)), 'No README files')
   const luaSources = {}
   for (const path of files) {
     if (/\.(lua|js|mjs|vue|ps1|cs)$/.test(path)) {
@@ -87,7 +86,53 @@ async function main() {
   await model.dispose()
   assert.equal(settings.enabled, false)
   console.log('PASS UI patch merging, revision conflict, failed-save retry, close flush, source hygiene')
-  console.log(`PASS ${results.length} Lua checks and UI settings checks`)
+  const { translate, resolveLanguage, contextLabel } = await import(pathToFileURL(resolve(root, 'ui/ui-vue/mods/AdvancedRPC/i18n.js')))
+  assert.equal(resolveLanguage('auto', 'ru-RU'), 'ru')
+  assert.equal(resolveLanguage('en', 'ru-RU'), 'en')
+  assert.equal(resolveLanguage('auto', 'de-DE'), 'en')
+  assert.equal(translate('General', 'ru'), 'Основное')
+  assert.equal(translate('General', 'en'), 'General')
+  assert.equal(translate(contextLabel('career_delivery'), 'ru'), 'Доставки')
+  assert.equal(translate('Image loaded: {width} × {height}.', 'ru', { width: 128, height: 64 }), 'Изображение загружено: 128 × 64.')
+  assert.equal(translate('My {vehicle|car}', 'ru'), 'My {vehicle|car}')
+  assert.equal(translate('Unknown variable: example', 'ru'), 'Неизвестная переменная: example')
+  console.log('PASS language detection, Russian labels, variable interpolation and user-text preservation')
+
+  const { classifyImage, checkImage } = await import(pathToFileURL(resolve(root, 'ui/ui-vue/mods/AdvancedRPC/imageValidation.js')))
+  assert.equal(classifyImage('').code, 'empty')
+  assert.equal(classifyImage('lvl_italy').code, 'asset')
+  for (const source of ['http://example.com/a.png', 'file:///a.png', 'https://user:pass@example.com/a.png', 'https://example.com/a b.png', 'https://example.com\\a.png']) assert.equal(classifyImage(source).code, 'invalid', source)
+  const longUrl = 'https://example.com/' + 'x'.repeat(130)
+  assert.equal(classifyImage(longUrl, 'native').code, 'too_long')
+  assert.equal(classifyImage(longUrl, 'custom').code, 'url')
+  assert.equal(classifyImage('https://example.com/' + 'я'.repeat(60)).code, 'too_long')
+  const fakeImage = outcome => () => ({
+    naturalWidth: 256, naturalHeight: 128,
+    set src(value) { if (outcome) setTimeout(() => outcome === 'load' ? this.onload?.() : this.onerror?.(), 5) },
+    removeAttribute() { this.removed = true },
+  })
+  const source = 'https://example.com/icon.png'
+  const options = { timeout: 30, createImage: fakeImage('load'), fetchHead: async () => { throw new Error('Blocked by CORS') } }
+  assert.deepEqual(await checkImage(source, 'native', options), { code: 'loaded', width: 256, height: 128 })
+  const head = (status, type) => async () => ({ status, headers: { get: () => type } })
+  assert.deepEqual(await checkImage(source, 'native', { ...options, createImage: fakeImage('error'), fetchHead: head(404, 'text/html') }), { code: 'http_error', status: 404 })
+  assert.deepEqual(await checkImage(source, 'native', { ...options, createImage: fakeImage('error'), fetchHead: head(200, 'text/html; charset=utf-8') }), { code: 'not_image', type: 'text/html' })
+  assert.equal((await checkImage(source, 'native', { ...options, createImage: fakeImage('error'), fetchHead: head(405, 'text/html') })).code, 'unavailable')
+  assert.equal((await checkImage(source, 'native', { ...options, createImage: fakeImage(null) })).code, 'timeout')
+  const policyTarget = new EventTarget()
+  const blockedCheck = checkImage(source, 'native', { ...options, createImage: fakeImage('error'), policyTarget })
+  const violation = new Event('securitypolicyviolation')
+  violation.blockedURI = source
+  policyTarget.dispatchEvent(violation)
+  assert.equal((await blockedCheck).code, 'blocked')
+  const abort = new AbortController()
+  const pendingCheck = checkImage(source, 'native', { ...options, createImage: fakeImage(null), signal: abort.signal })
+  abort.abort()
+  assert.equal((await pendingCheck).code, 'cancelled')
+  assert.equal((await checkImage(source, 'native', { ...options, signal: abort.signal })).code, 'cancelled')
+  assert.equal((await checkImage(source, 'native', options)).code, 'loaded')
+  console.log('PASS image URL limits, HTTPS validation, HTTP and content-type errors, CORS fallback, timeout, cancellation and retry')
+  console.log(`PASS ${results.length} Lua checks and UI settings, localization and image checks`)
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {

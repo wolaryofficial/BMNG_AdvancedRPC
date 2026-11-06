@@ -3,7 +3,7 @@ param([string]$InstallDirectory, [switch]$CheckBridge, [switch]$PrepareGitHub)
 
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$taskVersion = '1.0.0'
+$taskVersion = '1.1.0'
 $taskArchiveName = "advanced_rpc_$taskVersion.zip"
 $taskOutput = Join-Path $taskRoot 'dist'
 $taskArchivePath = Join-Path $taskOutput $taskArchiveName
@@ -58,6 +58,8 @@ $taskPaths = @(
   'scripts/advancedRPC/modScript.lua',
   'ui/ui-vue/mods/AdvancedRPC/index.js',
   'ui/ui-vue/mods/AdvancedRPC/settingsModel.js',
+  'ui/ui-vue/mods/AdvancedRPC/i18n.js',
+  'ui/ui-vue/mods/AdvancedRPC/imageValidation.js',
   'ui/ui-vue/mods/AdvancedRPC/Field.vue',
   'ui/ui-vue/mods/AdvancedRPC/Settings.vue',
   'mod_info.json',
@@ -98,7 +100,7 @@ if ($CheckBridge) {
     if ($LASTEXITCODE -ne 0) { throw 'Bridge checks failed.' }
   } finally { if (Test-Path -LiteralPath $taskTestExe) { Remove-Item -LiteralPath $taskTestExe -Force } }
 }
-Add-Type -AssemblyName System.IO.Compression.FileSystem
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 $taskStream = [IO.File]::Open($taskArchivePath, [IO.FileMode]::Create)
 $taskArchive = [IO.Compression.ZipArchive]::new($taskStream, [IO.Compression.ZipArchiveMode]::Create, $false)
 try {
@@ -131,8 +133,10 @@ if ($InstallDirectory) {
   if (-not (Test-Path -LiteralPath $InstallDirectory -PathType Container)) { throw 'The BeamNG mods directory does not exist.' }
   Copy-Item -LiteralPath $taskArchivePath -Destination $taskInstallPath -Force
   if ((Get-FileHash -Algorithm SHA256 -LiteralPath $taskInstallPath).Hash -ne $taskSha) { throw 'Installed archive checksum mismatch.' }
-  $taskLegacyInstall = Join-Path ([IO.Path]::GetFullPath($InstallDirectory)) "custom_rpc_$taskVersion.zip"
-  if (Test-Path -LiteralPath $taskLegacyInstall -PathType Leaf) { Remove-Item -LiteralPath $taskLegacyInstall -Force }
+  foreach ($taskOldName in @('custom_rpc_1.0.0.zip', 'advanced_rpc_1.0.0.zip')) {
+    $taskLegacyInstall = Join-Path ([IO.Path]::GetFullPath($InstallDirectory)) $taskOldName
+    if (Test-Path -LiteralPath $taskLegacyInstall -PathType Leaf) { Remove-Item -LiteralPath $taskLegacyInstall -Force }
+  }
   Write-Output "Installed: $taskInstallPath"
 }
 Write-Output "Verified $($taskPaths.Count) files: $taskArchivePath"
@@ -140,7 +144,7 @@ Write-Output "Bridge: $taskBridge"
 Write-Output "SHA256: $taskSha"
 if ($PrepareGitHub) {
   $taskGitHub = Join-Path $taskRoot 'github'
-  $taskPublishPaths = @($taskPaths) + @('build.ps1', '.gitignore', 'bridge/Bridge.cs', 'bridge/icon.ico', 'tests/unit.lua', 'tests/BridgeTests.cs', 'tools/check.mjs', 'tools/live.mjs', "dist/$taskArchiveName", 'dist/AdvancedRPC Bridge.exe')
+  $taskPublishPaths = @($taskPaths) + @('README.md', 'build.ps1', '.gitignore', 'bridge/Bridge.cs', 'bridge/icon.ico', 'tests/unit.lua', 'tests/BridgeTests.cs', 'tools/check.mjs', 'tools/live.mjs', "dist/$taskArchiveName", 'dist/AdvancedRPC Bridge.exe')
   foreach ($taskRelative in $taskPublishPaths) {
     $taskDestination = Join-Path $taskGitHub $taskRelative
     New-Item -ItemType Directory -Path (Split-Path -Parent $taskDestination) -Force | Out-Null

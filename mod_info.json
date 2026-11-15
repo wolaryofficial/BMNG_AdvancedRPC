@@ -1,7 +1,7 @@
 {
   "name": "AdvancedRPC",
   "author": "w0kx",
-  "version": "1.1.0",
-  "description": "Customizable Discord Rich Presence with profiles, image checks, Career, BeamMP and Split Screen support. English and Russian settings: Esc > Mods > AdvancedRPC. made by wolary (w0kx)",
+  "version": "1.1.1",
+  "description": "Customizable Discord Rich Presence with profiles, image checks, Career, RLS Career Overhaul, BeamMP and Split Screen support. English and Russian settings: Esc > Mods > AdvancedRPC. made by wolary (w0kx)",
   "type": "gameplay"
 }

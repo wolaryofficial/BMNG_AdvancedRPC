@@ -22,7 +22,7 @@
 
 AdvancedRPC expands BeamNG.drive's Discord Rich Presence with editable text, automatic profiles, and live game data. Configure everything directly in **Esc → Mods → AdvancedRPC**.
 
-**Version 1.1.0 · Tested with BeamNG.drive 0.40.3 · English and Russian interface**
+**Version 1.1.1 · Tested with BeamNG.drive 0.40.3 and 0.40.5 · English and Russian interface**
 
 **The bridge is optional.** The default **BeamNG Native** mode works through the game's built-in Discord connection. Use **Custom Application** mode and the bridge when you want to connect your own Discord application and use additional activity features.
 
@@ -34,12 +34,19 @@ AdvancedRPC expands BeamNG.drive's Discord Rich Presence with editable text, aut
 - **Images and captions:** use asset keys or public HTTPS image URLs, add hover text, and assign images to specific maps and vehicles.
 - **Text templates:** insert live variables, define fallback text, and rotate between multiple status messages.
 - **Career support:** display career activities, balance, BeamXP, level, and profile name.
+- **RLS Career Overhaul:** detect the active RLS career and read its own progress, deliveries, part shopping, garage state, and available jobs or events.
 - **BeamMP support:** show available server information and player counts.
 - **Split Screen:** choose which local player's vehicle and telemetry appear in your activity.
-- **Ready presets:** create Career, Deliveries, BeamMP, and Split Screen profiles with optional automatic rules.
+- **Ready presets:** create Career, RLS Career Overhaul, Deliveries, BeamMP, and Split Screen profiles with optional automatic rules.
 - **English and Russian:** follow the game language or choose an interface language in General. Your custom status text stays unchanged.
 - **Image URL checks:** validate resolved links, detect length limits, and retry external image loading with an explanation of failures or game restrictions.
 - **In-game preview:** inspect the active profile, resolved variables, and outgoing activity.
+
+### New in 1.1.1
+
+- Added RLS Career Overhaul 2.8.0 detection and progress through its own career APIs.
+- Added an RLS profile preset, automatic rule and the `{rls_activity}` variable for available jobs and events.
+- Existing profiles and settings are preserved.
 
 ### New in 1.1.0
 
@@ -83,6 +90,16 @@ Open **General → Interface and local player** to choose **Use game language**,
 In **Profiles → Ready presets**, choose a template and click **Create from preset**. The new profile can be edited freely. If **Add an automatic rule** is enabled, its rule is inserted at the top of the Rules list. Enable automatic rules in General and keep specific rules, such as Deliveries, above broader ones, such as Career.
 
 In Split Screen, set **Local player to track** to the player's number. Player 1 is the main player. The selected player's vehicle, configuration, speed, and requested telemetry are used throughout the activity. If that player has no vehicle, vehicle fields use their template fallback. One Discord account publishes one activity; the mod does not create separate activities for each local player.
+
+## RLS Career Overhaul
+
+Support for [RLS Career Overhaul](https://github.com/RLS-Modding/rls_career_overhaul) is automatic while its career is active. The default `{activity}` and `{mode}` fields identify it as **RLS Career Overhaul**. Existing Career and Deliveries rules also apply to RLS.
+
+Use **Profiles → Ready presets → RLS Career Overhaul** to create a separate profile, or choose **RLS Career Overhaul** as a rule condition. Put the RLS rule above a general Career rule if it should take priority. Creating the preset is optional; existing profiles keep working.
+
+The usual `{career_money}`, `{career_beamxp}`, `{career_level}`, `{career_profile}` and `{career_activity}` variables read the RLS session. `{rls_activity}` provides the first active job or event reported by RLS's activity API, such as taxi work or a race; use `{rls_activity|Exploring}` when nothing is active. Background businesses are excluded. Tutorial, mission and part-shopping states take priority in `{career_activity}`. Activity names come from RLS and are not translated by the mod's interface language selector.
+
+This integration targets RLS 2.8.0's `overhaul_*` APIs. Missing optional data uses the normal template fallback; it does not reuse values from an inactive vanilla career. No bridge is needed when using BeamNG Native.
 
 ## Using your own Discord application
 
@@ -157,6 +174,8 @@ The **Text** tab lists the available variables. Choose a profile in **General**,
 Version 1.1.0 was checked in BeamNG.drive 0.40.3 with menu and free-roam transitions, a two-player Split Screen session, career entry and delivery mode, and automatic reconnection after restarting the bridge and Discord. Discord acknowledged the custom application's activities and external image URL. The native BeamNG API does not expose Discord acknowledgements.
 
 BeamMP counters, context switching, and disconnect cleanup are covered by simulated API tests. A real BeamMP server session has not been verified for this release.
+
+The RLS integration included in 1.1.1 was checked for career detection and progress in an active RLS session on BeamNG.drive 0.40.5. Job changes, missing APIs, rule matching and cleanup when leaving RLS are covered by simulated tests. Individual RLS jobs have not all been played through, and older RLS releases have not been verified.
 
 ## Contributing
 

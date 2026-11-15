@@ -65,6 +65,8 @@ const ru = {
   'Automatic rules enabled': 'Автоматические правила включены', 'Rule {number}': 'Правило {number}', 'Use profile': 'Использовать профиль', 'Game context': 'Игровой контекст',
   'Any map': 'Любая карта', 'Any vehicle': 'Любая машина', 'Minimum km/h': 'Минимальная скорость, км/ч', 'Maximum km/h': 'Максимальная скорость, км/ч', 'Pause state': 'Состояние паузы', 'Any': 'Любое', 'Paused': 'На паузе', 'Running': 'Без паузы', 'Remove rule': 'Удалить правило', 'Add rule': 'Добавить правило',
   'Rules are checked from top to bottom. Every condition in a rule must match. Map and vehicle filters use exact IDs; leave a filter empty to accept any value. Speed limits are always in km/h.': 'Правила проверяются сверху вниз. Должны совпасть все условия. Для карты и машины укажите точный ID или оставьте поле пустым. Скорость в правилах всегда задаётся в км/ч.',
+  'Active RLS job or event': 'Активная работа или событие RLS',
+  'RLS Career Overhaul uses the same career variables. Use {rls_activity} for its active job or event, or the RLS preset and rule for a separate profile.': 'RLS Career Overhaul использует те же переменные карьеры. Для активной работы или события используйте {rls_activity}; для отдельного профиля доступны шаблон и условие RLS.',
   'Main menu': 'Главное меню', 'Loading': 'Загрузка', 'Free roam': 'Свободная езда', 'Career': 'Карьера', 'Deliveries': 'Доставки', 'Career missions': 'Задания карьеры', 'Part shopping': 'Покупка деталей', 'Career tutorial': 'Обучение карьере', 'Career walking': 'Ходьба в карьере', 'Career garage': 'Гараж карьеры', 'Mission': 'Задание', 'Scenario': 'Сценарий', 'Editor': 'Редактор', 'Photo mode': 'Фоторежим', 'Replay': 'Повтор', 'Walking': 'Ходьба', 'Split Screen': 'Разделённый экран',
   'Preview profile': 'Профиль для предпросмотра', 'Your Discord application': 'Ваше приложение Discord', 'Countdown timer': 'Обратный отсчёт', 'Elapsed timer': 'Прошедшее время', 'players': 'игроков',
   'BeamNG could not display an external image in this preview. Discord loads images independently; this does not mean Discord rejected the URL. Use a public, direct HTTPS image URL.': 'BeamNG не смог показать внешнее изображение. Discord загружает его отдельно, поэтому это не означает отказ Discord. Используйте публичную прямую HTTPS-ссылку.',
@@ -91,6 +93,7 @@ const ru = {
 }
 
 const contexts = {
+  rls_career: 'RLS Career Overhaul',
   any: 'Any', menu: 'Main menu', loading: 'Loading', freeroam: 'Free roam', career: 'Career', career_delivery: 'Deliveries', career_mission: 'Career missions', career_shopping: 'Part shopping', career_tutorial: 'Career tutorial', career_walking: 'Career walking', career_garage: 'Career garage', mission: 'Mission', scenario: 'Scenario', editor: 'Editor', photo: 'Photo mode', replay: 'Replay', walking: 'Walking', beammp: 'BeamMP', splitscreen: 'Split Screen',
 }
 

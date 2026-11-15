@@ -41,7 +41,7 @@ const created = []
 try {
   await open()
   assert.equal(await ui('return document.querySelector(".arpc-credit").textContent'), 'made by wolary (w0kx)')
-  assert.equal(await ui('return document.querySelector(".arpc-version").textContent'), 'v1.1.0')
+  assert.equal(await ui('return document.querySelector(".arpc-version").textContent'), 'v1.1.1')
   await until(() => ui('const icon=document.querySelector(".arpc-logo");return !!icon && icon.complete && icon.naturalWidth>0'), 'mod icon')
   assert((await settings()).contexts.includes('career_delivery'))
   assert((await settings()).variables.career_activity)
@@ -63,7 +63,7 @@ try {
   assert((await settings()).variables.local_player)
   console.log('PASS Russian and English interface switching and local player selection')
   await tab('Profiles')
-  for (const [name, context] of [['Career', 'career'], ['Deliveries', 'career_delivery'], ['BeamMP', 'beammp'], ['Split Screen', 'splitscreen']]) {
+  for (const [name, context] of [['Career', 'career'], ['RLS Career Overhaul', 'rls_career'], ['Deliveries', 'career_delivery'], ['BeamMP', 'beammp'], ['Split Screen', 'splitscreen']]) {
     await select('preset', name)
     await click('create-preset')
     await until(async () => (await settings()).settings.profiles.length === initialCount + 1, 'preset ' + name)
@@ -78,7 +78,7 @@ try {
     await until(async () => (await settings()).settings.profiles.length === initialCount, 'remove preset ' + name)
     created.pop()
   }
-  console.log('PASS all four presets through the settings UI, matching rules and deletion cleanup')
+  console.log('PASS all five presets through the settings UI, matching rules and deletion cleanup')
   await tab('Profiles')
   await click('duplicate')
   await until(async () => (await settings()).settings.profiles.length === initialCount + 1, 'profile duplication')

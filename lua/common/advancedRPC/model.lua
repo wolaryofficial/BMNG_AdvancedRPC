@@ -1,4 +1,4 @@
-local M = {version = "1.1.0", schemaVersion = 1}
+local M = {version = "1.1.1", schemaVersion = 1}
 
 M.variables = {
   activity = "Context-aware activity description", location = "Map or menu description",
@@ -11,11 +11,12 @@ M.variables = {
   server = "BeamMP server name", players = "Connected players", max_players = "Server player limit",
   paused = "Simulation pause state", career_activity = "Current career activity",
   career_money = "Career balance", career_beamxp = "Career BeamXP", career_level = "Career BeamXP level",
-  career_profile = "Career profile name", local_player = "Tracked local player number",
+  career_profile = "Career profile name", rls_activity = "Active RLS job or event", local_player = "Tracked local player number",
   local_players = "Local player count", split_mode = "Split Screen game mode"
 }
-M.contexts = {"any", "menu", "loading", "freeroam", "career", "career_delivery", "career_mission", "career_shopping", "career_tutorial", "career_walking", "career_garage", "mission", "scenario", "editor", "photo", "replay", "walking", "beammp", "splitscreen"}
+M.contexts = {"any", "menu", "loading", "freeroam", "career", "rls_career", "career_delivery", "career_mission", "career_shopping", "career_tutorial", "career_walking", "career_garage", "mission", "scenario", "editor", "photo", "replay", "walking", "beammp", "splitscreen"}
 M.presets = {
+  {id = "rls_career", name = "RLS Career Overhaul", context = "rls_career", details = "RLS Career Overhaul | {career_activity|Exploring}", state = "{map|Main menu} | {vehicle|On foot}"},
   {id = "career", name = "Career", context = "career", details = "Career | {career_activity|Exploring}", state = "{map|Main menu} | Level {career_level|1}"},
   {id = "delivery", name = "Deliveries", context = "career_delivery", details = "Delivering cargo | {vehicle|On foot}", state = "{map|Main menu} | {speed|Parked}"},
   {id = "beammp", name = "BeamMP", context = "beammp", details = "{server|BeamMP}", state = "{players|?}/{max_players|?} players | {vehicle|On foot}"},

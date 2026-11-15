@@ -106,6 +106,7 @@
           <BngGroupPanel :title="t('Variables')">
             <p class="arpc-note">{{ t("Use {variable} or {variable|fallback}. Missing values use the fallback or N/A. Select a field below, then click a variable to append it.") }}</p>
             <p class="arpc-note">{{ t("Career supports exploring, walking, missions, deliveries, tutorials and part shopping. Use {career_activity}, {career_money}, {career_beamxp}, {career_level} and {career_profile}, or select a career context in Rules.") }}</p>
+            <p class="arpc-note">{{ t("RLS Career Overhaul uses the same career variables. Use {rls_activity} for its active job or event, or the RLS preset and rule for a separate profile.") }}</p>
             <Field label="Insert into" type="select" :value="insertTarget" :options="insertOptions" @change="insertTarget = $event" />
             <div class="arpc-variables"><BngButton v-for="(description, name) in state.variables" :key="name" accent="secondary" :title="t(description)" @click="edit(insertTarget, profile[insertTarget] + '{' + name + '}')">{{ '{' + name + '}' }}</BngButton></div>
           </BngGroupPanel>

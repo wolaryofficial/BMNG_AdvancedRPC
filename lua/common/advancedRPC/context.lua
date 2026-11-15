@@ -104,7 +104,10 @@ function M.new()
     local flags = ctx.flags
     flags.menu = level == ""
     flags.loading = call(core_gamestate, "getLoadingStatus", "levels") == true
-    flags.career = not flags.menu and call(career_career, "isActive") == true
+    local rls = rawget(extensions, "overhaul_career_career")
+    flags.rls_career = not flags.menu and call(rls, "isActive") == true
+    local career = flags.rls_career and rls or career_career
+    flags.career = not flags.menu and call(career, "isActive") == true
     flags.splitscreen = not flags.menu and call(multiseat, "isMultiseatActive") == true
     if flags.splitscreen then
       local manager = rawget(extensions, "gameplay_multiseat_gamemodeManager")
@@ -125,21 +128,38 @@ function M.new()
     local scenario = call(scenario_scenarios, "getScenario")
     if scenario then flags.scenario = true ctx.mission = ctx.mission or translated(scenario.name) end
     if flags.career then
-      flags.career_tutorial = call(career_modules_tutorial, "isActive") == true
+      local tutorial, delivery, shopping, garage, attributes, saves = career_modules_tutorial, career_modules_delivery_general, career_modules_partShopping, gameplay_garageMode, career_modules_playerAttributes, career_saveSystem
+      if flags.rls_career then
+        tutorial, delivery = rawget(extensions, "overhaul_career_guide_tutorial"), rawget(extensions, "overhaul_career_logistics_general")
+        shopping, garage = rawget(extensions, "overhaul_career_parts_partShopping"), rawget(extensions, "overhaul_integration_services_garageMode")
+        attributes, saves = rawget(extensions, "overhaul_career_economy_playerAttributes"), rawget(extensions, "overhaul_career_saveSystem")
+        local activities = call(rls.activity, "list")
+        if type(activities) == "table" then
+          for _, id in ipairs(activities) do
+            local definition = call(rls.activity, "get", id)
+            if type(definition) == "table" and (definition.role == "foreground" or definition.role == "child" or definition.role == "map" or definition.role == "service") and call(rls.activity, "isActive", id) == true then
+              ctx.rls_activity = translated(definition.label) or tostring(id)
+              break
+            end
+          end
+        end
+      end
+      flags.career_tutorial = call(tutorial, "isActive") == true
       flags.career_mission = flags.mission == true
-      flags.career_delivery = call(career_modules_delivery_general, "isDeliveryModeActive") == true
-      flags.career_shopping = call(career_modules_partShopping, "isShoppingSessionActive") == true
+      flags.career_delivery = call(delivery, "isDeliveryModeActive") == true
+      flags.career_shopping = call(shopping, "isShoppingSessionActive") == true
       flags.career_walking = flags.walking
-      flags.career_garage = call(gameplay_garageMode, "isActive") == true
-      ctx.career_activity = "Exploring"
+      flags.career_garage = call(garage, "isActive") == true
+      ctx.career_activity = ctx.rls_activity or "Exploring"
       for _, item in ipairs({{"career_tutorial", "Tutorial"}, {"career_mission", ctx.mission and "Mission: " .. ctx.mission or "Mission"}, {"career_shopping", "Shopping for parts"}, {"career_delivery", "Delivering cargo"}, {"career_garage", "In garage"}, {"career_walking", "Walking"}}) do
         if flags[item[1]] then ctx.career_activity = item[2] break end
       end
-      ctx.career_money = numberText(call(career_modules_playerAttributes, "getAttributeValue", "money"))
-      local xp = call(career_modules_playerAttributes, "getAttributeValue", "beamXP")
+      if ctx.rls_activity and not flags.career_tutorial and not flags.career_mission and not flags.career_shopping then ctx.career_activity = ctx.rls_activity end
+      ctx.career_money = numberText(call(attributes, "getAttributeValue", "money"))
+      local xp = call(attributes, "getAttributeValue", "beamXP")
       ctx.career_beamxp = numberText(xp)
-      if ctx.career_beamxp then ctx.career_level = numberText(call(career_career, "getBeamXPLevel", xp)) end
-      ctx.career_profile = call(career_saveSystem, "getCurrentDisplayName") or call(career_saveSystem, "getCurrentProfile")
+      if ctx.career_beamxp then ctx.career_level = numberText(call(career, "getBeamXPLevel", xp)) end
+      ctx.career_profile = call(saves, "getCurrentDisplayName") or call(saves, "getCurrentProfile")
       if type(ctx.career_profile) ~= "string" then ctx.career_profile = nil end
     end
     local network = rawget(extensions, "MPCoreNetwork")
@@ -164,8 +184,8 @@ function M.new()
     for _, item in ipairs({{"loading", "Loading"}, {"menu", "Main menu"}, {"editor", "World editor"}, {"photo", "Photo mode"}, {"replay", "Replay"}, {"career", "Career"}, {"splitscreen", "Split Screen"}, {"walking", "Walking"}, {"mission", "Mission"}, {"scenario", "Scenario"}, {"beammp", "BeamMP"}}) do
       if flags[item[1]] then mode = item[2] break end
     end
-    ctx.mode = mode
-    ctx.activity = mode .. (mode == "Career" and " | " .. ctx.career_activity or "") .. (mode == "Split Screen" and " | " .. (flags.walking and "Walking" or ctx.split_mode) or "") .. (ctx.vehicle and not flags.menu and not flags.loading and " | " .. ctx.vehicle or "")
+    ctx.mode = mode == "Career" and flags.rls_career and "RLS Career Overhaul" or mode
+    ctx.activity = ctx.mode .. (mode == "Career" and " | " .. ctx.career_activity or "") .. (mode == "Split Screen" and " | " .. (flags.walking and "Walking" or ctx.split_mode) or "") .. (ctx.vehicle and not flags.menu and not flags.loading and " | " .. ctx.vehicle or "")
     ctx.location = flags.beammp and (ctx.server or "Multiplayer") or ctx.map or "Main menu"
     if ctx.isPaused and not flags.menu then ctx.activity = "Paused | " .. ctx.activity end
     local tod = level ~= "" and call(core_environment, "getTimeOfDay")

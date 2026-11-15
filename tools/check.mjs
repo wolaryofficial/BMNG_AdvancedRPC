@@ -93,6 +93,7 @@ async function main() {
   assert.equal(translate('General', 'ru'), 'Основное')
   assert.equal(translate('General', 'en'), 'General')
   assert.equal(translate(contextLabel('career_delivery'), 'ru'), 'Доставки')
+  assert.equal(contextLabel('rls_career'), 'RLS Career Overhaul')
   assert.equal(translate('Image loaded: {width} × {height}.', 'ru', { width: 128, height: 64 }), 'Изображение загружено: 128 × 64.')
   assert.equal(translate('My {vehicle|car}', 'ru'), 'My {vehicle|car}')
   assert.equal(translate('Unknown variable: example', 'ru'), 'Неизвестная переменная: example')

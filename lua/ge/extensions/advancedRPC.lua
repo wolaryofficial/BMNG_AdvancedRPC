@@ -431,6 +431,7 @@ function M.onClientStartMission() nextSample = 0 end
 function M.onClientEndMission() telemetry, nextSample = nil, 0 end
 function M.onGameStateUpdate() nextSample = 0 end
 function M.onCareerActive() nextSample, urgent = 0, true end
+M.onOverhaulActive = M.onCareerActive
 M.onDeliveryModeStarted = M.onCareerActive
 M.onDeliveryModeStopped = M.onCareerActive
 M.onPartShoppingStarted = M.onCareerActive

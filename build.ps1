@@ -3,7 +3,7 @@ param([string]$InstallDirectory, [switch]$CheckBridge, [switch]$PrepareGitHub)
 
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$taskVersion = '1.1.0'
+$taskVersion = '1.1.1'
 $taskArchiveName = "advanced_rpc_$taskVersion.zip"
 $taskOutput = Join-Path $taskRoot 'dist'
 $taskArchivePath = Join-Path $taskOutput $taskArchiveName
@@ -133,7 +133,7 @@ if ($InstallDirectory) {
   if (-not (Test-Path -LiteralPath $InstallDirectory -PathType Container)) { throw 'The BeamNG mods directory does not exist.' }
   Copy-Item -LiteralPath $taskArchivePath -Destination $taskInstallPath -Force
   if ((Get-FileHash -Algorithm SHA256 -LiteralPath $taskInstallPath).Hash -ne $taskSha) { throw 'Installed archive checksum mismatch.' }
-  foreach ($taskOldName in @('custom_rpc_1.0.0.zip', 'advanced_rpc_1.0.0.zip')) {
+  foreach ($taskOldName in @('custom_rpc_1.0.0.zip', 'advanced_rpc_1.0.0.zip', 'advanced_rpc_1.1.0.zip')) {
     $taskLegacyInstall = Join-Path ([IO.Path]::GetFullPath($InstallDirectory)) $taskOldName
     if (Test-Path -LiteralPath $taskLegacyInstall -PathType Leaf) { Remove-Item -LiteralPath $taskLegacyInstall -Force }
   }
